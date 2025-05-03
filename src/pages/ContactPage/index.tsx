@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
-import app from "../../firebase/firebaseConfig";  // Ensure you have your firebaseConfig set up here
+import {app} from "../../firebase/firebaseConfig";  // Ensure you have your firebaseConfig set up here
 
 const ContactForm: React.FC = () => {
   const [name, setName] = useState("");

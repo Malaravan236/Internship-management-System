@@ -1,237 +1,377 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   getAuth,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
-  applyActionCode,
-  GoogleAuthProvider,
   signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile,
 } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import app from "../../firebase/firebaseConfig";
-import logo from "../../assets/images/cart.jpg";
+import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+import { app } from "../../firebase/firebaseConfig";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+  faEnvelope, 
+  faLock, 
+  faUser, 
+  faCheckCircle, 
+  faTimes 
+} from "@fortawesome/free-solid-svg-icons";
 
-const SignUp: React.FC = () => {
-  const [username, setUsername] = useState("");
+const Signup: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [reEnterPassword, setReEnterPassword] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
+  const [username, setUsername] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [isVerified, setIsVerified] = useState(false); // Flag for verification status
-  const navigate = useNavigate(); // Initialize navigate
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const navigate = useNavigate();
 
-  const handleManualSignUp = async (e: React.FormEvent) => {
+  // Auto-hide success message after 3 seconds
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showSuccessPopup) {
+      timer = setTimeout(() => {
+        setShowSuccessPopup(false);
+        navigate("/");
+      }, 3000);
+    }
+    return () => clearTimeout(timer);
+  }, [showSuccessPopup, navigate]);
+
+  // Check if email exists in manualUsers collection
+  const checkEmailExistsInManualUsers = async (email: string) => {
+    const db = getFirestore(app);
+    const manualUsersRef = collection(db, "manualUsers");
+    const q = query(manualUsersRef, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Password validation
-    if (password !== reEnterPassword) {
-      setError("Passwords do not match!");
+    
+    // Validate password match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
       return;
     }
 
-    const auth = getAuth(app);
+    // Validate password strength (at least 6 characters)
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
     const db = getFirestore(app);
 
     try {
+      // Check if email already exists in manualUsers collection only
+      const emailExists = await checkEmailExistsInManualUsers(email);
+      if (emailExists) {
+        setError("This email is already registered. Please use a different email or log in.");
+        return;
+      }
+
+      const auth = getAuth(app);
+      
       // Create user with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // Update user profile with username
+      await updateProfile(user, {
+        displayName: username
+      });
 
-      // Send email verification
-      await sendEmailVerification(user);
-      setSuccessMessage("Sign-Up successful! A verification email has been sent. Please check your email.");
+      // Store manual user data in the "manualUsers" collection
+      const userData = {
+        uid: user.uid,
+        email: user.email,
+        username: username,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+        authType: "manual" // Adding auth type for clarity
+      };
 
-      // Clear form fields except username
-      setEmail("");
-      setPassword("");
-      setReEnterPassword("");
-      setError("");
-
-      // Show the verification code input
-      setIsVerified(true); // Prompt for verification code input
+      // Store in the manualUsers collection
+      await setDoc(doc(db, "manualUsers", user.uid), userData);
+      
+      // Also store in the general users collection for compatibility
+      await setDoc(doc(db, "users", user.uid), {
+        ...userData,
+        authType: "manual"
+      });
+      
+      // Store user info in localStorage
+      localStorage.setItem("user", JSON.stringify({
+        ...userData,
+        authType: "manual"
+      }));
+      
+      // Show success message
+      setSuccessMessage(`Account created successfully! Welcome, ${username}!`);
+      setShowSuccessPopup(true);
     } catch (error: any) {
       console.error("Error signing up:", error.message);
-      setError(`Sign-Up failed: ${error.message}`);
+      
+      // Provide a more user-friendly error message for Firebase auth errors
+      if (error.code === 'auth/email-already-in-use') {
+        setError("This email is already in use. If you signed up with Google previously, please use Google sign-in.");
+      } else {
+        setError(`Signup failed: ${error.message}`);
+      }
     }
   };
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleGoogleSignup = async () => {
     const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
     const db = getFirestore(app);
 
     try {
-      // Apply the action code to verify the email
-      await applyActionCode(auth, verificationCode);
-      setSuccessMessage("Email successfully verified!");
-
-      // Store user data in Firestore after successful verification
-      const user = auth.currentUser;
-      if (user) {
-        // Save the username and other details in Firestore
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          username: username, // Ensure username is stored
-          email: user.email,
-          createdAt: new Date().toISOString(),
-        });
-
-        // Redirect to login after successful signup and verification
-        navigate("/login");
-
-        // Clear username after successful verification
-        setUsername("");
-      }
-    } catch (error: any) {
-      console.error("Error verifying code:", error.message);
-      setError(`Verification failed: ${error.message}`);
-    }
-  };
-
-  const handleGoogleSignUp = async () => {
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-
-    try {
-      // Sign in with Google
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      const db = getFirestore(app);
-
-      // Store user data in Firestore after successful Google sign-in
-      await setDoc(doc(db, "users", user.uid), {
+      
+      // Check if this is a new user
+      const isNewUser = result.additionalUserInfo?.isNewUser;
+      
+      // Store Google user data in the "googleUsers" collection
+      const userData = {
         uid: user.uid,
-        username: user.displayName,
         email: user.email,
+        username: user.displayName || `User_${user.uid.substring(0, 5)}`,
         createdAt: new Date().toISOString(),
-      });
+        lastLogin: new Date().toISOString(),
+        profilePicture: user.photoURL,
+        authType: "google" // Adding auth type for clarity
+      };
 
-      // Redirect to home or dashboard after successful Google sign-in
-      navigate("/");
+      // Store in the googleUsers collection
+      await setDoc(doc(db, "googleUsers", user.uid), userData, { merge: true });
+      
+      // Also store in the general users collection for compatibility
+      await setDoc(doc(db, "users", user.uid), {
+        ...userData,
+        authType: "google"
+      }, { merge: true });
+      
+      // Store user info in localStorage
+      localStorage.setItem("user", JSON.stringify({
+        ...userData,
+        authType: "google"
+      }));
+      
+      // Show success message
+      if (isNewUser) {
+        setSuccessMessage(`Account created successfully! Welcome, ${userData.username}!`);
+      } else {
+        setSuccessMessage(`Welcome back, ${userData.username}!`);
+      }
+      setShowSuccessPopup(true);
     } catch (error: any) {
       console.error("Error signing up with Google:", error.message);
-      setError(`Google Sign-In failed: ${error.message}`);
+      setError(`Signup failed: ${error.message}`);
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 flex-col md:flex-row mt-10">
-      {/* Left side with image */}
-      <div className="w-full md:w-1/2 bg-cover bg-center flex justify-center items-center">
-        <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6 pt-20">
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg max-w-md">
+          <div className="flex items-center p-4 border-l-4 border-teal-500">
+            <div className="flex-shrink-0">
+              <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-teal-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-800">{successMessage}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                className="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Right side with form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-white shadow-md rounded-lg p-8">
-        <div className="w-full max-w-md">
-          <h1 className="text-[40px] text-gray-800">Create an Account</h1>
-          <h4 className="text-gray-800 text-[20px]">Enter your details below</h4>
-          <br />
+      <div className="max-w-4xl w-full bg-white rounded-lg shadow-lg overflow-hidden flex flex-col md:flex-row">
+        {/* Left Panel */}
+        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-10 flex flex-col justify-center items-center md:w-1/2">
+          <h1 className="text-4xl font-bold mb-4">Intern Connect</h1>
+          <p className="text-lg text-center mb-8">
+            Join our community of professionals and unlock your career potential.
+          </p>
+          <div className="bg-white bg-opacity-10 p-6 rounded-lg">
+            <p className="italic mb-4">
+              "Signing up was the best career decision I made this year. The networking opportunities and resources are invaluable."
+            </p>
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
+              <div>
+                <p className="font-semibold">Michael Chen</p>
+                <p className="text-sm">Software Developer</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          {/* Sign-Up Form */}
-          {!isVerified ? (
-            <form onSubmit={handleManualSignUp} className="mb-4">
-              {error && <div className="text-red-500 mb-4">{error}</div>}
-              {successMessage && <div className="text-green-500 mb-4">{successMessage}</div>}
-              <div className="mb-4">
-                <label className="block text-gray-700">Username</label>
+        {/* Right Panel - Signup Form */}
+        <div className="p-10 flex flex-col justify-center md:w-1/2">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">Create Account</h1>
+            <p className="text-gray-600">Join Intern Connect today</p>
+          </div>
+
+          <form onSubmit={handleSignup} className="space-y-4">
+            {error && <div className="text-red-500 text-center">{error}</div>}
+            
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                Username
+              </label>
+              <div className="mt-1 relative">
+                <FontAwesomeIcon
+                  icon={faUser}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="text"
-                  className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
+                  id="username"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Choose a username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
-              <div className="mb-4">
-                <label className="block text-gray-700">Email</label>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <div className="mt-1 relative">
+                <FontAwesomeIcon
+                  icon={faEnvelope}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="email"
-                  className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
+                  id="email"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Your email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
-              <div className="mb-4">
-                <label className="block text-gray-700">Password</label>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <FontAwesomeIcon
+                  icon={faLock}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="password"
-                  className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
+                  id="password"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Create a password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
-              <div className="mb-4">
-                <label className="block text-gray-700">Re-enter Password</label>
+              <p className="mt-1 text-xs text-gray-500">Password must be at least 6 characters</p>
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <div className="mt-1 relative">
+                <FontAwesomeIcon
+                  icon={faLock}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="password"
-                  className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
-                  value={reEnterPassword}
-                  onChange={(e) => setReEnterPassword(e.target.value)}
+                  id="confirmPassword"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
               </div>
-              <button
-                type="submit"
-                className="w-full text-white py-2 px-4 rounded bg-sky-500 hover:bg-sky-600 transition"
-              >
-                Sign Up
-              </button>
-            </form>
-          ) : (
-            /* Verification Code Form */
-            <form onSubmit={handleVerifyCode} className="mb-4">
-              <div className="mb-4">
-                <label className="block text-gray-700">Enter Verification Code</label>
-                <input
-                  type="text"
-                  className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full text-white py-2 px-4 rounded bg-sky-500 hover:bg-sky-600 transition"
-              >
-                Verify Code
-              </button>
-            </form>
-          )}
+            </div>
 
-          {/* Google Sign-Up Button */}
-          <div className="text-center my-4">OR</div>
-          <button
-            className="w-full text-black py-2 px-4 rounded hover:bg-gray-300 transition"
-            onClick={handleGoogleSignUp}
-          >
-            <img
-              src="https://static-00.iconduck.com/assets.00/google-icon-2048x2048-czn3g8x8.png"
-              alt="Google"
-              className="inline-block w-6 h-6 mr-2"
-            />
-            Sign Up with Google
-          </button>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="terms"
+                className="h-4 w-4 text-teal-500 focus:ring-teal-500 border-gray-300 rounded"
+                required
+              />
+              <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
+                I agree to the{" "}
+                <a href="/terms" className="text-teal-500 hover:text-teal-600">
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" className="text-teal-500 hover:text-teal-600">
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
 
-          {/* Already have an account link */}
-          <div className="mt-4 text-center">
-            <p>
+            <button
+              type="submit"
+              className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-200"
+            >
+              Create Account
+            </button>
+
+            <div className="flex items-center my-6">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="mx-4 text-gray-500">or continue with</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <button
+              type="button"
+              className="w-full flex items-center justify-center bg-white border border-gray-300 rounded-md py-2 px-4 hover:bg-gray-50 transition duration-200"
+              onClick={handleGoogleSignup}
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/800px-Google_%22G%22_logo.svg.png"
+                alt="Google logo"
+                className="w-5 h-5 mr-2"
+              />
+              Google
+            </button>
+
+            <div className="text-center text-sm text-gray-600 mt-6">
               Already have an account?{" "}
-              <a href="/login" className="text-sky-500 hover:text-sky-600">Please Login</a>
-            </p>
-          </div>
+              <a href="/login" className="text-teal-500 hover:text-teal-600">
+                Log in
+              </a>
+            </div>
+          </form>
         </div>
       </div>
     </div>
   );
 };
 
-export default SignUp;
-
+export default Signup;

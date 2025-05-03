@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getFirestore, collection, getDocs, deleteDoc, doc } from "firebase/firestore";
-import app from "../../firebase/firebaseConfig"; // Ensure you have your firebaseConfig set up here
+import {app} from "../../firebase/firebaseConfig"; // Ensure you have your firebaseConfig set up here
 
 const ContactFormSubmissions: React.FC = () => {
   const [submissions, setSubmissions] = useState<any[]>([]);

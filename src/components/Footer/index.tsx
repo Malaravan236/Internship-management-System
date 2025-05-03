@@ -1,57 +1,106 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFacebookF, faTwitter, faInstagram } from '@fortawesome/free-brands-svg-icons';
-
-
+import {
+  faFacebookF,
+  faTwitter,
+  faInstagram,
+  faLinkedinIn, // Added faLinkedinIn
+} from '@fortawesome/free-brands-svg-icons';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-gray-800 text-white py-8 mt-4">
-      <div className="container mx-auto px-6 md:px-12">
+    <footer className="bg-gray-800 text-white py-12">
+      <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About Us Section */}
+          {/* About Section */}
           <div>
-            <h3 className="text-xl font-semibold mb-4">About Us</h3>
+            <h3 className="text-lg font-bold mb-4">InternConnect</h3>
             <p className="text-gray-400">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed viverra quam sit amet ante blandit.
+              Empowering students to launch their careers through premium internships and personalized support.
             </p>
           </div>
+
           {/* Quick Links Section */}
           <div>
-            <h3 className="text-xl font-semibold mb-4">Quick Links</h3>
+            <h3 className="text-lg font-bold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white">Home</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">About</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Services</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white">Contact</a></li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-primary transition-colors duration-300">
+                  Home
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-primary transition-colors duration-300">
+                  Features
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-primary transition-colors duration-300">
+                  How It Works
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-primary transition-colors duration-300">
+                  Success Stories
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-gray-400 hover:text-primary transition-colors duration-300">
+                  Program
+                </a>
+              </li>
             </ul>
           </div>
-          {/* Contact Section */}
+
+          {/* Contact Us Section */}
           <div>
-            <h3 className="text-xl font-semibold mb-4">Contact</h3>
-            <p className="text-gray-400">Email: info@example.com</p>
-            <p className="text-gray-400">Phone: +1 234 567 890</p>
+            <h3 className="text-lg font-bold mb-4">Contact Us</h3>
+            <ul className="space-y-2">
+              <li className="text-gray-400">Email: info@internconnect.com</li>
+              <li className="text-gray-400">Phone: +91 9876543210</li>
+              <li className="text-gray-400">Address: 123 Career Lane, Success City</li>
+            </ul>
           </div>
+
           {/* Follow Us Section */}
           <div>
-            <h3 className="text-xl font-semibold mb-4">Follow Us</h3>
+            <h3 className="text-lg font-bold mb-4">Follow Us</h3>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transform hover:scale-110 transition-all duration-300">
-                <FontAwesomeIcon icon={faFacebookF} className="w-6 h-6" />
+              <a
+                href="#"
+                className="text-gray-400 hover:text-primary transition-colors duration-300"
+                aria-label="Facebook"
+              >
+                <FontAwesomeIcon icon={faFacebookF} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transform hover:scale-110 transition-all duration-300">
-                <FontAwesomeIcon icon={faTwitter} className="w-6 h-6" />
+              <a
+                href="#"
+                className="text-gray-400 hover:text-primary transition-colors duration-300"
+                aria-label="Twitter"
+              >
+                <FontAwesomeIcon icon={faTwitter} />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transform hover:scale-110 transition-all duration-300">
-                <FontAwesomeIcon icon={faInstagram} className="w-6 h-6" />
+              <a
+                href="#"
+                className="text-gray-400 hover:text-primary transition-colors duration-300"
+                aria-label="Instagram"
+              >
+                <FontAwesomeIcon icon={faInstagram} />
+              </a>
+              <a
+                href="#"
+                className="text-gray-400 hover:text-primary transition-colors duration-300"
+                aria-label="LinkedIn"
+              >
+                <FontAwesomeIcon icon={faLinkedinIn} />
               </a>
             </div>
           </div>
         </div>
-        
-        {/* Footer Bottom */}
-        <div className="mt-8 border-t border-gray-700 pt-4 text-center">
-          <p className="text-gray-400 text-sm">&copy; 2025 Your Company Name. All rights reserved.</p>
+
+        {/* Copyright Section */}
+        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+          &copy; {new Date().getFullYear()} InternConnect. All rights reserved.
         </div>
       </div>
     </footer>

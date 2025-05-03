@@ -1,6 +1,268 @@
+// import React, { useState, useEffect } from "react";
+// import {
+//   getAuth,
+//   signInWithEmailAndPassword,
+//   signInWithPopup,
+//   GoogleAuthProvider,
+//   sendPasswordResetEmail,
+// } from "firebase/auth";
+// import { getFirestore, doc, getDoc } from "firebase/firestore";
+// import { useNavigate } from "react-router-dom";
+// import { app } from "../../firebase/firebaseConfig";
+// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+// import { faEnvelope, faLock, faCheckCircle, faTimes } from "@fortawesome/free-solid-svg-icons";
+
+// const Login: React.FC = () => {
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [error, setError] = useState("");
+//   const [resetEmailSent, setResetEmailSent] = useState(false);
+//   const [successMessage, setSuccessMessage] = useState("");
+//   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+//   const navigate = useNavigate();
+
+//  // Auto-hide success message after 3 seconds
+// useEffect(() => {
+//   let timer: NodeJS.Timeout;
+//   if (showSuccessPopup) {
+//     timer = setTimeout(() => {
+//       setShowSuccessPopup(false);
+//       navigate("/");
+//       window.location.reload(true);
+//     }, 3000);
+//   }
+//   return () => clearTimeout(timer);
+// }, [showSuccessPopup, navigate]);
+
+//   const handleLogin = async (e: React.FormEvent) => {
+//     e.preventDefault();
+
+//     const auth = getAuth(app);
+//     const db = getFirestore(app);
+
+//     try {
+//       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+//       const user = userCredential.user;
+
+//       const userDoc = await getDoc(doc(db, "users", user.uid));
+//       if (userDoc.exists()) {
+//         const userData = userDoc.data();
+//         localStorage.setItem("user", JSON.stringify(userData));
+
+//         // Show success message
+//         setSuccessMessage(`Welcome back, ${userData.username}!`);
+//         setShowSuccessPopup(true);
+//       }
+//     } catch (error: any) {
+//       console.error("Error logging in:", error.message);
+//       setError(`Login failed: ${error.message}`);
+//     }
+//   };
+
+//   const handleGoogleSignIn = async () => {
+//     const auth = getAuth(app);
+//     const provider = new GoogleAuthProvider();
+//     const db = getFirestore(app);
+
+//     try {
+//       const result = await signInWithPopup(auth, provider);
+//       const user = result.user;
+
+//       const userDoc = await getDoc(doc(db, "users", user.uid));
+//       if (userDoc.exists()) {
+//         const userData = userDoc.data();
+//         localStorage.setItem("user", JSON.stringify(userData));
+
+//         // Show success message
+//         setSuccessMessage(`Welcome back, ${userData.username}!`);
+//         setShowSuccessPopup(true);
+//       }
+//     } catch (error: any) {
+//       console.error("Error logging in with Google:", error.message);
+//       setError(`Login failed: ${error.message}`);
+//     }
+//   };
+
+//   const handleForgotPassword = async () => {
+//     const auth = getAuth(app);
+
+//     try {
+//       await sendPasswordResetEmail(auth, email);
+//       setResetEmailSent(true);
+//       setSuccessMessage(`Password reset email sent to ${email}`);
+//       setShowSuccessPopup(true);
+//     } catch (error: any) {
+//       console.error("Error sending reset email:", error.message);
+//       setError(`Failed to send reset email: ${error.message}`);
+//     }
+//   };
+
+//   return (
+//     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6 pt-20">
+//       {/* Success Popup */}
+//       {showSuccessPopup && (
+//         <div className="fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg max-w-md">
+//           <div className="flex items-center p-4 border-l-4 border-teal-500">
+//             <div className="flex-shrink-0">
+//               <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-teal-500" />
+//             </div>
+//             <div className="ml-3">
+//               <p className="text-sm font-medium text-gray-800">{successMessage}</p>
+//             </div>
+//             <div className="ml-auto pl-3">
+//               <button
+//                 onClick={() => setShowSuccessPopup(false)}
+//                 className="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
+//               >
+//                 <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       <div className="max-w-4xl w-full bg-white rounded-lg shadow-lg overflow-hidden flex flex-col md:flex-row">
+//         {/* Left Panel */}
+//         <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-10 flex flex-col justify-center items-center md:w-1/2">
+//           <h1 className="text-4xl font-bold mb-4">Intern Connect</h1>
+//           <p className="text-lg text-center mb-8">
+//             Transform your workflow with our powerful platform. Join thousands of satisfied users today.
+//           </p>
+//           <div className="bg-white bg-opacity-10 p-6 rounded-lg">
+//             <p className="italic mb-4">
+//               "This platform has completely revolutionized how our team collaborates. The interface is
+//               intuitive and the features are exactly what we needed."
+//             </p>
+//             <div className="flex items-center">
+//               <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
+//               <div>
+//                 <p className="font-semibold">Sarah Johnson</p>
+//                 <p className="text-sm">Product Manager</p>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* Right Panel - Login Form */}
+//         <div className="p-10 flex flex-col justify-center md:w-1/2">
+//           <div className="text-center mb-8">
+//             <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
+//             <p className="text-gray-600">Log in to access your account</p>
+//           </div>
+
+//           <form onSubmit={handleLogin} className="space-y-6">
+//             {error && <div className="text-red-500 text-center">{error}</div>}
+//             <div>
+//               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+//                 Email Address
+//               </label>
+//               <div className="mt-1 relative">
+//                 <FontAwesomeIcon
+//                   icon={faEnvelope}
+//                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+//                 />
+//                 <input
+//                   type="email"
+//                   id="email"
+//                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+//                   placeholder="Your email address"
+//                   value={email}
+//                   onChange={(e) => setEmail(e.target.value)}
+//                   required
+//                 />
+//               </div>
+//             </div>
+
+//             <div>
+//               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+//                 Password
+//               </label>
+//               <div className="mt-1 relative">
+//                 <FontAwesomeIcon
+//                   icon={faLock}
+//                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+//                 />
+//                 <input
+//                   type="password"
+//                   id="password"
+//                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+//                   placeholder="Your password"
+//                   value={password}
+//                   onChange={(e) => setPassword(e.target.value)}
+//                   required
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="flex items-center justify-between">
+//               <div className="flex items-center">
+//                 <input
+//                   type="checkbox"
+//                   id="remember"
+//                   className="h-4 w-4 text-teal-500 focus:ring-teal-500 border-gray-300 rounded"
+//                 />
+//                 <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
+//                   Remember me
+//                 </label>
+//               </div>
+//               <button
+//                 type="button"
+//                 className="text-sm text-teal-500 hover:text-teal-600"
+//                 onClick={handleForgotPassword}
+//               >
+//                 Forgot password?
+//               </button>
+//             </div>
+
+//             <button
+//               type="submit"
+//               className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-200"
+//             >
+//               Log In
+//             </button>
+
+//             <div className="flex items-center my-6">
+//               <div className="flex-grow border-t border-gray-300"></div>
+//               <span className="mx-4 text-gray-500">or continue with</span>
+//               <div className="flex-grow border-t border-gray-300"></div>
+//             </div>
+
+//             <button
+//               type="button"
+//               className="w-full flex items-center justify-center bg-white border border-gray-300 rounded-md py-2 px-4 hover:bg-gray-50 transition duration-200"
+//               onClick={handleGoogleSignIn}
+//             >
+//               <img
+//                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/800px-Google_%22G%22_logo.svg.png"
+//                 alt="Google logo"
+//                 className="w-5 h-5 mr-2"
+//               />
+//               Google
+//             </button>
+
+//             <div className="text-center text-sm text-gray-600 mt-6">
+//               Don't have an account?{" "}
+//               <a href="/signup" className="text-teal-500 hover:text-teal-600">
+//                 Sign up
+//               </a>
+//             </div>
+//           </form>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default Login;
 
 
-import React, { useState } from "react";
+
+
+
+
+
+
+import React, { useState, useEffect } from "react";
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -10,18 +272,56 @@ import {
 } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import app from "../../firebase/firebaseConfig";
-import logo from "../../assets/images/cart.jpg";
+import { app } from "../../firebase/firebaseConfig";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { 
+  faEnvelope, 
+  faLock, 
+  faCheckCircle, 
+  faTimes 
+} from "@fortawesome/free-solid-svg-icons";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
+
+  // Handle success message and navigation
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (showSuccessPopup && isLoggedIn) {
+      timer = setTimeout(() => {
+        setShowSuccessPopup(false);
+        navigate("/");
+        
+        // Only reload if absolutely necessary
+        if (window.location.pathname === "/") {
+          window.location.reload();
+        }
+      }, 2000); // Reduced to 2 seconds for better UX
+    }
+    
+    return () => clearTimeout(timer);
+  }, [showSuccessPopup, isLoggedIn, navigate]);
+
+  const handleLoginSuccess = (userData: any) => {
+    localStorage.setItem("user", JSON.stringify(userData));
+    setSuccessMessage(`Welcome back, ${userData.username}!`);
+    setShowSuccessPopup(true);
+    setIsLoggedIn(true);
+    // Dispatch event to notify other components
+    window.dispatchEvent(new Event("authStateChanged"));
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -32,12 +332,8 @@ const Login: React.FC = () => {
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        localStorage.setItem("user", JSON.stringify(userData));
-        alert("Login successful! Welcome, " + userData.username);
+        handleLoginSuccess(userDoc.data());
       }
-
-      navigate("/profile");
     } catch (error: any) {
       console.error("Error logging in:", error.message);
       setError(`Login failed: ${error.message}`);
@@ -55,12 +351,8 @@ const Login: React.FC = () => {
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        localStorage.setItem("user", JSON.stringify(userData));
-        alert("Login successful! Welcome, " + userData.username);
+        handleLoginSuccess(userDoc.data());
       }
-
-      navigate("/profile");
     } catch (error: any) {
       console.error("Error logging in with Google:", error.message);
       setError(`Login failed: ${error.message}`);
@@ -68,12 +360,18 @@ const Login: React.FC = () => {
   };
 
   const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email address first");
+      return;
+    }
+
     const auth = getAuth(app);
 
     try {
       await sendPasswordResetEmail(auth, email);
       setResetEmailSent(true);
-      alert("Password reset email sent to " + email);
+      setSuccessMessage(`Password reset email sent to ${email}`);
+      setShowSuccessPopup(true);
     } catch (error: any) {
       console.error("Error sending reset email:", error.message);
       setError(`Failed to send reset email: ${error.message}`);
@@ -81,77 +379,160 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 flex-col md:flex-row ">
-      <div className="w-full md:w-1/2 bg-cover bg-center flex justify-center items-center">
-        <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6 pt-20">
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg max-w-md animate-fade-in">
+          <div className="flex items-center p-4 border-l-4 border-teal-500">
+            <div className="flex-shrink-0">
+              <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-teal-500" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-gray-800">{successMessage}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                className="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-white shadow-md rounded-lg ">
-        <div className="w-full max-w-md">
-          <h1 className="text-[40px] text-gray-800">Log In</h1>
-          <h4 className="text-gray-800 text-[20px]">Enter your details below</h4>
-          <br />
-          <br />
-          <form onSubmit={handleLogin} className="mb-4">
-            {error && <div className="text-red-500 mb-4">{error}</div>}
-            <div className="mb-4">
-              <label className="block text-gray-700">Email</label>
-              <input
-                type="email"
-                className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+      <div className="max-w-4xl w-full bg-white rounded-lg shadow-lg overflow-hidden flex flex-col md:flex-row">
+        {/* Left Panel */}
+        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-10 flex flex-col justify-center items-center md:w-1/2">
+          <h1 className="text-4xl font-bold mb-4">Intern Connect</h1>
+          <p className="text-lg text-center mb-8">
+            Transform your workflow with our powerful platform. Join thousands of satisfied users today.
+          </p>
+          <div className="bg-white bg-opacity-10 p-6 rounded-lg">
+            <p className="italic mb-4">
+              "This platform has completely revolutionized how our team collaborates. The interface is
+              intuitive and the features are exactly what we needed."
+            </p>
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
+              <div>
+                <p className="font-semibold">Sarah Johnson</p>
+                <p className="text-sm">Product Manager</p>
+              </div>
             </div>
-            <div className="mb-4">
-              <label className="block text-gray-700">Password</label>
-              <input
-                type="password"
-                className="w-full border-b py-2 px-3 focus:outline-none focus:border-green-500 border-gray-500"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+          </div>
+        </div>
+
+        {/* Right Panel - Login Form */}
+        <div className="p-10 flex flex-col justify-center md:w-1/2">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
+            <p className="text-gray-600">Log in to access your account</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            {error && (
+              <div className="text-red-500 text-center p-2 bg-red-50 rounded">
+                {error}
+              </div>
+            )}
+            
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <div className="mt-1 relative">
+                <FontAwesomeIcon
+                  icon={faEnvelope}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="email"
+                  id="email"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
             </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <FontAwesomeIcon
+                  icon={faLock}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="password"
+                  id="password"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  className="h-4 w-4 text-teal-500 focus:ring-teal-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
+                  Remember me
+                </label>
+              </div>
+              <button
+                type="button"
+                className="text-sm text-teal-500 hover:text-teal-600"
+                onClick={handleForgotPassword}
+              >
+                Forgot password?
+              </button>
+            </div>
+
             <button
               type="submit"
-              className="w-full text-white py-2 px-4 rounded bg-sky-500 hover:bg-sky-600 transition"
+              className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-200"
             >
               Log In
             </button>
-          </form>
-          <div className="text-center my-4">OR</div>
-          <button
-            className="w-full text-black py-2 px-4 rounded hover:bg-gray-300 transition"
-            onClick={handleGoogleSignIn}
-          >
-            <img
-              src="https://static-00.iconduck.com/assets.00/google-icon-2048x2048-czn3g8x8.png"
-              alt="Google"
-              className="inline-block w-6 h-6 mr-2"
-            />
-            Log In with Google
-          </button>
-          <div className="mt-4 text-center">
-            <p>
-              Create your account now!{" "}
-              <a href="/signup" className="text-sky-500 hover:text-sky-600">
-                Please Signup
+
+            <div className="flex items-center my-6">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="mx-4 text-gray-500">or continue with</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <button
+              type="button"
+              className="w-full flex items-center justify-center bg-white border border-gray-300 rounded-md py-2 px-4 hover:bg-gray-50 transition duration-200"
+              onClick={handleGoogleSignIn}
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/800px-Google_%22G%22_logo.svg.png"
+                alt="Google logo"
+                className="w-5 h-5 mr-2"
+              />
+              Google
+            </button>
+
+            <div className="text-center text-sm text-gray-600 mt-6">
+              Don't have an account?{" "}
+              <a href="/signup" className="text-teal-500 hover:text-teal-600">
+                Sign up
               </a>
-            </p>
-            <p className="mt-2">
-              <button
-                className="text-sky-500 hover:text-sky-600"
-                onClick={handleForgotPassword}
-              >
-                Forgot Password?
-              </button>
-            </p>
-            {resetEmailSent && (
-              <p className="text-green-500 mt-2">Check your email to reset your password.</p>
-            )}
-          </div>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -159,3 +540,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+
