@@ -9,7 +9,8 @@ import {
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-gray-800 text-white py-12">
+    <footer className="bg-gray-800  bottom-0 left-0 right-0 text-white py-12">
+      {/* <footer className="fixed bottom-0 left-0 right-0 bg-gray-800 text-white py-4"> */}
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About Section */}
@@ -108,3 +109,9 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
+
+
+
+
+
+

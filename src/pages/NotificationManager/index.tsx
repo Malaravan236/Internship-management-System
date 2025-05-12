@@ -1,180 +1,5 @@
-// import React, { useState, useEffect } from "react";
-// import { Pencil, Trash2, Send } from "lucide-react";
-// import { db } from "../../firebase/firebaseConfig"; // Adjust the path as needed
-// import {
-//   collection,
-//   addDoc,
-//   updateDoc,
-//   deleteDoc,
-//   doc,
-//   onSnapshot,
-//   query,
-//   orderBy,
-// } from "firebase/firestore";
-
-// interface Notification {
-//   id: string;
-//   title: string;
-//   message: string;
-// }
-
-// const NotificationManager: React.FC = () => {
-//   const [notifications, setNotifications] = useState<Notification[]>([]);
-//   const [title, setTitle] = useState("");
-//   const [message, setMessage] = useState("");
-//   const [editId, setEditId] = useState<string | null>(null);
-
-//   // Reference to the notifications collection in Firestore
-//   const notificationsCollection = collection(db, "notifications");
-
-//   // Listen for real-time updates
-//   useEffect(() => {
-//     // Optional: Order by created time descending if you store timestamps
-//     const q = query(notificationsCollection, orderBy("createdAt", "desc"));
-
-//     const unsubscribe = onSnapshot(
-//       q,
-//       (snapshot) => {
-//         const notificationsData: Notification[] = snapshot.docs.map((doc) => ({
-//           id: doc.id,
-//           title: doc.data().title,
-//           message: doc.data().message,
-//         }));
-//         setNotifications(notificationsData);
-//       },
-//       (error) => {
-//         console.error("Error fetching notifications: ", error);
-//       }
-//     );
-
-//     // Clean up the subscription on unmount
-//     return () => unsubscribe();
-//   }, []);
-
-//   // Handle sending (creating or updating) a notification
-//   const handleSend = async () => {
-//     if (!title || !message) return;
-
-//     if (editId) {
-//       // Update the existing notification
-//       try {
-//         const notificationRef = doc(db, "notifications", editId);
-//         await updateDoc(notificationRef, { title, message });
-//         // Reset the editing state
-//         setEditId(null);
-//       } catch (error) {
-//         console.error("Error updating notification: ", error);
-//       }
-//     } else {
-//       // Add a new notification
-//       try {
-//         await addDoc(notificationsCollection, {
-//           title,
-//           message,
-//           // Optionally, add a createdAt field. Firestore supports timestamps:
-//           createdAt: new Date(),
-//         });
-//       } catch (error) {
-//         console.error("Error adding notification: ", error);
-//       }
-//     }
-//     setTitle("");
-//     setMessage("");
-//   };
-
-//   // Populate the form with the selected notification's data for editing
-//   const handleEdit = (notif: Notification) => {
-//     setEditId(notif.id);
-//     setTitle(notif.title);
-//     setMessage(notif.message);
-//   };
-
-//   // Delete a notification
-//   const handleDelete = async (id: string) => {
-//     try {
-//       await deleteDoc(doc(db, "notifications", id));
-//     } catch (error) {
-//       console.error("Error deleting notification: ", error);
-//     }
-//   };
-
-//   return (
-//     // Added pt-40 to create padding-top, avoiding overlap with a fixed navbar; adjust as needed
-//     <div className="max-w-2xl mx-auto p-4 pt-40 mb-20 bg-gray-100 rounded shadow">
-//       <h2 className="text-2xl font-bold mb-4 text-center">
-//         Admin Notification Panel
-//       </h2>
-
-//       <div className="mb-4">
-//         <input
-//           type="text"
-//           placeholder="Notification Title"
-//           className="w-full p-2 border mb-2 rounded"
-//           value={title}
-//           onChange={(e) => setTitle(e.target.value)}
-//         />
-//         <textarea
-//           placeholder="Notification Message"
-//           className="w-full p-2 border mb-2 rounded"
-//           value={message}
-//           onChange={(e) => setMessage(e.target.value)}
-//         />
-//         <button
-//           onClick={handleSend}
-//           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
-//         >
-//           <Send size={16} />
-//           {editId ? "Update Notification" : "Send Notification"}
-//         </button>
-//       </div>
-
-//       <div className="space-y-4">
-//         {notifications.map((notif) => (
-//           <div
-//             key={notif.id}
-//             className="border p-4 rounded shadow flex justify-between items-center"
-//           >
-//             <div>
-//               <h3 className="font-bold text-lg">{notif.title}</h3>
-//               <p>{notif.message}</p>
-//             </div>
-//             <div className="flex gap-2">
-//               <button
-//                 className="text-green-600 hover:text-green-800"
-//                 onClick={() => handleEdit(notif)}
-//               >
-//                 <Pencil size={18} />
-//               </button>
-//               <button
-//                 className="text-red-600 hover:text-red-800"
-//                 onClick={() => handleDelete(notif.id)}
-//               >
-//                 <Trash2 size={18} />
-//               </button>
-//             </div>
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default NotificationManager;
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from "react";
-import { Pencil, Trash2, Send, Users, User } from "lucide-react";
+import { Pencil, Trash2, Send, Users, User, ChevronDown, Check } from "lucide-react";
 import { db } from "../../firebase/firebaseConfig";
 import {
   collection,
@@ -185,7 +10,6 @@ import {
   onSnapshot,
   query,
   orderBy,
-  where,
   getDocs,
 } from "firebase/firestore";
 
@@ -213,15 +37,13 @@ const NotificationManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   
-  // Ref for dropdown container to handle outside clicks
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Reference to the notifications collection in Firestore
   const notificationsCollection = collection(db, "notifications");
   const usersCollection = collection(db, "users");
 
-  // Load users for selection
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -239,7 +61,6 @@ const NotificationManager: React.FC = () => {
     fetchUsers();
   }, []);
 
-  // Listen for real-time updates on notifications
   useEffect(() => {
     const q = query(notificationsCollection, orderBy("createdAt", "desc"));
 
@@ -264,7 +85,6 @@ const NotificationManager: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Handle outside clicks to close the dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -278,22 +98,18 @@ const NotificationManager: React.FC = () => {
     };
   }, []);
 
-  // Filter users based on search term
   const filteredUsers = userOptions.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Toggle user selection
   const toggleUserSelection = (userId: string) => {
     setSelectedUsers((prevSelected) =>
       prevSelected.includes(userId)
         ? prevSelected.filter((id) => id !== userId)
         : [...prevSelected, userId]
     );
-    // Don't close dropdown to allow multiple selections
   };
 
-  // Handle sending (creating or updating) a notification
   const handleSend = async () => {
     if (!title || !message) {
       alert("Please provide both title and message");
@@ -315,38 +131,36 @@ const NotificationManager: React.FC = () => {
 
     try {
       if (editId) {
-        // Update existing notification
         const notificationRef = doc(db, "notifications", editId);
         await updateDoc(notificationRef, notificationData);
         setEditId(null);
       } else {
-        // Add new notification
         await addDoc(notificationsCollection, notificationData);
       }
       
-      // Reset form
       setTitle("");
       setMessage("");
       setTargetType("all");
       setSelectedUsers([]);
       setSearchTerm("");
       setShowUserDropdown(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error with notification:", error);
       alert("Failed to send notification");
     }
   };
 
-  // Populate the form with the selected notification's data for editing
   const handleEdit = (notif: Notification) => {
     setEditId(notif.id);
     setTitle(notif.title);
     setMessage(notif.message);
     setTargetType(notif.targetType);
     setSelectedUsers(notif.targetUsers || []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Delete a notification
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this notification?")) {
       try {
@@ -358,7 +172,6 @@ const NotificationManager: React.FC = () => {
     }
   };
 
-  // Get user names for display
   const getUserNames = (userIds: string[]) => {
     return userIds
       .map((id) => {
@@ -369,247 +182,306 @@ const NotificationManager: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 pt-40 mb-20 bg-gray-50 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        Admin Notification Panel
-      </h2>
-
-      <div className="mb-6 bg-white p-4 rounded-md shadow">
-        <h3 className="font-semibold text-lg mb-4">
-          {editId ? "Edit Notification" : "Create New Notification"}
-        </h3>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Title</label>
-          <input
-            type="text"
-            placeholder="Notification Title"
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+    <div className="p-6 mx-auto p-2 mt-10 pt-20 mb-20">
+      {/* Success Notification */}
+      {showSuccess && (
+        <div className="fixed top-6 right-6 bg-white text-emerald-800 px-6 py-3 rounded-lg shadow-lg z-50 border-t-2 border-emerald-500 flex items-center gap-2 animate-slide-in">
+          <Check className="h-5 w-5 text-emerald-600" />
+          <span className="font-medium">
+            {editId ? "Notification updated!" : "Notification sent successfully!"}
+          </span>
         </div>
+      )}
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Message</label>
-          <textarea
-            placeholder="Notification Message"
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-24"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-        </div>
+      
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Target Audience</label>
-          <div className="flex gap-4 mb-3">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="targetType"
-                className="mr-2"
-                checked={targetType === "all"}
-                onChange={() => {
-                  setTargetType("all");
-                  setShowUserDropdown(false);
-                }}
-              />
-              <span className="flex items-center">
-                <Users size={16} className="mr-1" /> All Users
-              </span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="targetType"
-                className="mr-2"
-                checked={targetType === "specific"}
-                onChange={() => setTargetType("specific")}
-              />
-              <span className="flex items-center">
-                <User size={16} className="mr-1" /> Specific Users
-              </span>
-            </label>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Panel - Form */}
+        <div className="bg-white rounded-xl shadow-md border border-emerald-100 p-8">
+          <div className="bg-emerald-700 rounded-lg p-4 mb-6 text-white">
+            <h3 className="text-xl font-bold">
+              {editId ? "Edit Notification" : "Create New Notification"}
+            </h3>
+            <p className="text-white opacity-90">
+              {editId ? "Update the notification details" : "Send a notification to users"}
+            </p>
           </div>
 
-          {targetType === "specific" && (
-            <div className="mb-2 relative" ref={dropdownRef}>
-              <div
-                className="border border-gray-300 rounded p-2 cursor-text"
-                onClick={() => setShowUserDropdown(true)}
-              >
-                {selectedUsers.length > 0 ? (
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {selectedUsers.map((userId) => {
-                      const user = userOptions.find((u) => u.id === userId);
-                      return (
-                        <span
-                          key={userId}
-                          className="bg-blue-100 text-blue-800 text-sm rounded-full px-2 py-1 flex items-center"
-                        >
-                          {user?.name || userId}
-                          <button
-                            className="ml-1 text-blue-600 hover:text-blue-800"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleUserSelection(userId);
-                            }}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <span className="text-gray-500">Select users...</span>
-                )}
-                <input
-                  type="text"
-                  className="mt-1 w-full focus:outline-none"
-                  placeholder="Search users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onFocus={() => setShowUserDropdown(true)}
-                  onClick={(e) => e.stopPropagation()}
-                />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Title</label>
+              <input
+                type="text"
+                placeholder="Notification Title"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-1">Message</label>
+              <textarea
+                placeholder="Notification Message"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-32"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={500}
+              />
+              <div className="text-right text-sm text-gray-500 mt-1">
+                {message.length}/500 characters
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">Target Audience</label>
+              <div className="flex gap-4 mb-3">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="targetType"
+                    className="mr-2 text-emerald-600 focus:ring-emerald-500"
+                    checked={targetType === "all"}
+                    onChange={() => {
+                      setTargetType("all");
+                      setShowUserDropdown(false);
+                    }}
+                  />
+                  <span className="flex items-center">
+                    <Users size={16} className="mr-1" /> All Users
+                  </span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="targetType"
+                    className="mr-2 text-emerald-600 focus:ring-emerald-500"
+                    checked={targetType === "specific"}
+                    onChange={() => setTargetType("specific")}
+                  />
+                  <span className="flex items-center">
+                    <User size={16} className="mr-1" /> Specific Users
+                  </span>
+                </label>
               </div>
 
-              {showUserDropdown && (
-                <div className="absolute mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
-                  {filteredUsers.length > 0 ? (
-                    filteredUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className={`p-2 cursor-pointer ${
-                          selectedUsers.includes(user.id)
-                            ? "bg-blue-50"
-                            : "hover:bg-gray-100"
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleUserSelection(user.id);
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={() => {}}
-                            className="mr-2"
-                          />
-                          {user.name}
-                        </div>
+              {targetType === "specific" && (
+                <div className="mb-2 relative" ref={dropdownRef}>
+                  <div
+                    className="border border-gray-300 rounded-lg p-2 cursor-text bg-white"
+                    onClick={() => setShowUserDropdown(true)}
+                  >
+                    {selectedUsers.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {selectedUsers.map((userId) => {
+                          const user = userOptions.find((u) => u.id === userId);
+                          return (
+                            <span
+                              key={userId}
+                              className="bg-emerald-100 text-emerald-800 text-sm rounded-full px-2 py-1 flex items-center"
+                            >
+                              {user?.name || userId}
+                              <button
+                                className="ml-1 text-emerald-600 hover:text-emerald-800"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleUserSelection(userId);
+                                }}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-2 text-gray-500">No users found</div>
-                  )}
-                  <div className="p-2 border-t border-gray-200">
-                    <button 
-                      className="w-full bg-gray-100 text-gray-700 py-1 rounded hover:bg-gray-200"
-                      onClick={() => setShowUserDropdown(false)}
-                    >
-                      Done
-                    </button>
+                    ) : (
+                      <span className="text-gray-500">Select users...</span>
+                    )}
+                    <input
+                      type="text"
+                      className="mt-1 w-full p-2 focus:outline-none bg-transparent"
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onFocus={() => setShowUserDropdown(true)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <ChevronDown 
+                      size={16} 
+                      className={`absolute right-3 top-3 text-gray-400 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`}
+                    />
                   </div>
+
+                  {showUserDropdown && (
+                    <div className="absolute mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            className={`p-2 cursor-pointer flex items-center ${
+                              selectedUsers.includes(user.id)
+                                ? "bg-emerald-50"
+                                : "hover:bg-gray-50"
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleUserSelection(user.id);
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedUsers.includes(user.id)}
+                              readOnly
+                              className="mr-2 h-4 w-4 text-emerald-600 rounded focus:ring-emerald-500"
+                            />
+                            {user.name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-2 text-gray-500">No users found</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                onClick={() => {
+                  setEditId(null);
+                  setTitle("");
+                  setMessage("");
+                  setTargetType("all");
+                  setSelectedUsers([]);
+                  setShowUserDropdown(false);
+                }}
+                className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              >
+                Reset
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={!title || !message || (targetType === "specific" && selectedUsers.length === 0)}
+                className={`px-6 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                  !title || !message || (targetType === "specific" && selectedUsers.length === 0)
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-emerald-600 text-white hover:bg-emerald-700"
+                }`}
+              >
+                <Send size={18} className="shrink-0" />
+                {editId ? "Update" : "Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel - Notifications List */}
+        <div className="bg-white rounded-xl shadow-md border border-emerald-100 p-6">
+          <div className="bg-emerald-700 rounded-lg p-4 mb-6 text-white">
+            <h3 className="text-xl font-bold">Notification History</h3>
+            <p className="text-white opacity-90">
+              View and manage all sent notifications
+            </p>
+          </div>
+
+          {notifications.length > 0 ? (
+            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              {notifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-lg text-emerald-800">
+                      {notif.title}
+                    </h3>
+                    <div className="flex gap-2">
+                      <button
+                        className="text-emerald-600 hover:text-emerald-800 p-1"
+                        onClick={() => handleEdit(notif)}
+                        title="Edit"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        className="text-red-500 hover:text-red-700 p-1"
+                        onClick={() => handleDelete(notif.id)}
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mb-3 text-gray-700">{notif.message}</p>
+                  
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                    <span className="flex items-center bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">
+                      {notif.targetType === "all" ? (
+                        <>
+                          <Users size={14} className="mr-1.5" /> All Users
+                        </>
+                      ) : (
+                        <>
+                          <User size={14} className="mr-1.5" /> 
+                          {notif.targetUsers?.length || 0} Users
+                        </>
+                      )}
+                    </span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-500">
+                      {notif.createdAt.toLocaleDateString()} at {notif.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  
+                  {notif.targetType === "specific" && notif.targetUsers && notif.targetUsers.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
+                      <p className="font-medium text-gray-700 mb-1">Recipients:</p>
+                      <p className="text-gray-600 line-clamp-2">
+                        {getUserNames(notif.targetUsers)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <div className="max-w-xs mx-auto">
+                <Users size={48} className="mx-auto text-gray-300 mb-3" />
+                <h4 className="font-medium text-lg mb-1">No notifications yet</h4>
+                <p className="text-sm">Create your first notification using the form</p>
+              </div>
             </div>
           )}
         </div>
-
-        <div className="flex justify-between">
-          <button
-            onClick={() => {
-              setEditId(null);
-              setTitle("");
-              setMessage("");
-              setTargetType("all");
-              setSelectedUsers([]);
-              setShowUserDropdown(false);
-            }}
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSend}
-            className={`px-4 py-2 rounded flex items-center gap-2 ${
-              !title || !message || (targetType === "specific" && selectedUsers.length === 0)
-                ? "bg-blue-300 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
-            disabled={!title || !message || (targetType === "specific" && selectedUsers.length === 0)}
-          >
-            <Send size={16} />
-            {editId ? "Update Notification" : "Send Notification"}
-          </button>
-        </div>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="font-semibold text-lg mb-2">Notification History</h3>
-        {notifications.length > 0 ? (
-          notifications.map((notif) => (
-            <div
-              key={notif.id}
-              className="border p-4 rounded shadow bg-white"
-            >
-              <div className="flex justify-between mb-2">
-                <h3 className="font-bold text-lg">{notif.title}</h3>
-                <div className="flex gap-2">
-                  <button
-                    className="text-green-600 hover:text-green-800 p-1"
-                    onClick={() => handleEdit(notif)}
-                    title="Edit"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    className="text-red-600 hover:text-red-800 p-1"
-                    onClick={() => handleDelete(notif.id)}
-                    title="Delete"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-              <p className="mb-2">{notif.message}</p>
-              <div className="text-sm text-gray-600 flex items-center gap-2">
-                <span className="flex items-center">
-                  {notif.targetType === "all" ? (
-                    <>
-                      <Users size={14} className="mr-1" /> All Users
-                    </>
-                  ) : (
-                    <>
-                      <User size={14} className="mr-1" /> 
-                      {notif.targetUsers && notif.targetUsers.length > 0
-                        ? `${notif.targetUsers.length} specific users`
-                        : "No users specified"}
-                    </>
-                  )}
-                </span>
-                <span>•</span>
-                <span>
-                  {notif.createdAt.toLocaleDateString()} {notif.createdAt.toLocaleTimeString()}
-                </span>
-              </div>
-              
-              {notif.targetType === "specific" && notif.targetUsers && notif.targetUsers.length > 0 && (
-                <div className="mt-2 text-sm text-gray-600">
-                  <span className="font-medium">Recipients:</span> {getUserNames(notif.targetUsers)}
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-500 py-4">
-            No notifications yet. Create your first notification above.
-          </div>
-        )}
-      </div>
+      {/* Animation styles */}
+      <style>{`
+        @keyframes slide-in {
+          0% { 
+            opacity: 0; 
+            transform: translateX(20px);
+          }
+          20% { 
+            opacity: 1; 
+            transform: translateX(0);
+          }
+          80% { 
+            opacity: 1; 
+            transform: translateX(0);
+          }
+          100% { 
+            opacity: 0; 
+            transform: translateX(20px);
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 3s ease-in-out forwards;
+          box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
+        }
+      `}</style>
     </div>
   );
 };

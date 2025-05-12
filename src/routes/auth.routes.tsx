@@ -1,23 +1,21 @@
 import { lazy } from "react";
-
 const Home = lazy(() => import('../pages/HomePage'));
-
-
-
 const Login = lazy(() => import('../pages/LoginPage'));
 const SignUp = lazy(() => import('../pages/SignUp'));
 const Profile = lazy(() => import('../pages/Profile'));
-const Contact = lazy(() => import('../pages/ContactPage'));
-const CustomerQuery = lazy(() => import('../pages/CustomerQuery'));
 const Applicationform = lazy(() => import('../pages/Applicationform'));
 const NotificationManager = lazy(() => import('../pages/NotificationManager'));
 const StudentReview = lazy(() => import('../pages/Studentreview'));
-const CurrentUser = lazy(() => import('../pages/CurrentUser'));
 const Adminsideviewreview = lazy(() => import('../pages/Adminsideviewreview'));
 const StudentInternApplication = lazy(() => import('../pages/StudentInternApplication'));
 const AvailableInterns = lazy(() => import('../pages/AvailableInterns'));
 const InternshipRequest = lazy(() => import('../pages/InternshipRequest'));
 const UpdateIntern = lazy(() => import('../pages/UpdateIntern'));
+const AdminSideCertificatesUpload = lazy(() => import('../pages/AdminSideCertificatesUpload'));
+const StudentSideViewCertificate= lazy(() => import('../pages/StudentSideViewCertificate'));
+const InternAcceptedStudent= lazy(() => import('../pages/InternAcceptedStudent'));
+
+
 export const navigationRouts =  [
     {
         name: 'Home',
@@ -45,18 +43,6 @@ export const navigationRouts =  [
 
     },
     {
-        name: 'Contact',
-        path: '/contact',
-        component: <Contact/>
-
-    },
-    {
-        name: 'CustomerQuery',
-        path: '/customerquery',
-        component: <CustomerQuery/>
-
-    },
-    {
         name: 'Applicationform',
         path: '/applicationform',
         component: <Applicationform isOpen={false} onClose={function (): void {
@@ -73,13 +59,7 @@ export const navigationRouts =  [
     {
         name: 'StudentReview',
         path: '/studentreview',
-        component: <StudentReview currentStudentId={""} currentStudentName={""}/>
-
-    },
-    {
-        name: 'CurrentUser',
-        path: '/currentuser',
-        component: <CurrentUser/>
+        component: <StudentReview/>
 
     },
     {
@@ -91,7 +71,7 @@ export const navigationRouts =  [
     {
         name: 'StudentInternApplication',
         path: '/studentinternapplication',
-        component: <StudentInternApplication isModalOpen={false} setIsModalOpen={function (isOpen: boolean): void {
+        component: <StudentInternApplication isModalOpen={false} setIsModalOpen={function (): void {
             throw new Error("Function not implemented.");
         } } internshipId={""}/>
 
@@ -112,6 +92,25 @@ export const navigationRouts =  [
         name: 'UpdateIntern',
         path: '/updateintern',
         component: <UpdateIntern/>
+
+    }
+    ,
+    {
+        name: 'AdminSideCertificatesUpload',
+        path: '/adminsidecertificateupload',
+        component: <AdminSideCertificatesUpload/>
+
+    },
+    {
+        name: 'StudentSideViewCertificate',
+        path: '/certificate',
+        component: <StudentSideViewCertificate/>
+
+    },
+    {
+        name: 'InternAcceptedStudent',
+        path: '/internacceptedstudent',
+        component: <InternAcceptedStudent/>
 
     }
 ];

@@ -5,7 +5,6 @@ import {
   DollarSign, 
   Briefcase, 
   Clock, 
-  ExternalLink, 
   X, 
   Check, 
   Loader2,
@@ -14,10 +13,12 @@ import {
   ChevronUp,
   Mail,
   Phone,
-  FileText
+  FileText,
+  AlertCircle
 } from "lucide-react";
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebaseConfig';
+import { useNavigate } from 'react-router-dom';
 
 interface Internship {
   id: string;
@@ -81,6 +82,44 @@ export default function InternshipListings() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showLoginAlert, setShowLoginAlert] = useState(false);
+  const navigate = useNavigate();
+  
+  // Student info from localStorage
+  const [studentInfo, setStudentInfo] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  } | null>(null);
+
+  // Get student info on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setStudentInfo({
+          id: userData.uid,
+          name: userData.username || userData.displayName || "Anonymous",
+          email: userData.email || "No email"
+        });
+        
+        // Pre-fill form data if user is logged in
+        setFormData(prev => ({
+          ...prev,
+          fullName: userData.username || userData.displayName || '',
+          email: userData.email || ''
+        }));
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        setStudentInfo({
+          id: "unknown",
+          name: "Anonymous",
+          email: "No email"
+        });
+      }
+    }
+  }, []);
 
   // Fetch internships from Firestore
   const fetchInternships = async () => {
@@ -114,11 +153,16 @@ export default function InternshipListings() {
 
   // Handle opening the application form
   const handleApply = (internship: Internship) => {
+    if (!studentInfo) {
+      setShowLoginAlert(true);
+      return;
+    }
+    
     setSelectedInternship(internship);
     setShowApplyForm(true);
     setFormData({
-      fullName: '',
-      email: '',
+      fullName: studentInfo.name,
+      email: studentInfo.email,
       phone: '',
       college: '',
       course: '',
@@ -135,6 +179,11 @@ export default function InternshipListings() {
   const closeApplyForm = () => {
     setShowApplyForm(false);
     setSelectedInternship(null);
+  };
+
+  // Close login alert
+  const closeLoginAlert = () => {
+    setShowLoginAlert(false);
   };
 
   // Handle form input changes
@@ -191,8 +240,14 @@ export default function InternshipListings() {
         internshipId: selectedInternship?.id,
         internshipTitle: selectedInternship?.internshipTitle,
         ...formData,
+        studentId: studentInfo?.id,
         submittedAt: new Date(),
-        status: 'pending'
+        status: 'pending',
+        internshipStatus: 'not started',
+        startDate: selectedInternship?.startDate || '',
+        endDate: selectedInternship?.endDate || '',
+        duration: selectedInternship?.duration || '',
+        mentor: 'Not assigned'
       });
       
       setSubmitting(false);
@@ -668,6 +723,31 @@ export default function InternshipListings() {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Required Modal */}
+      {showLoginAlert && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100 max-w-md w-full">
+            <AlertCircle className="mx-auto h-12 w-12 text-emerald-500 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Authentication Required</h2>
+            <p className="text-gray-600 mb-6">Please sign in to apply for internships.</p>
+            <div className="flex justify-center gap-4">
+              <button 
+                onClick={closeLoginAlert}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button 
+                className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                onClick={() => navigate('/login')} 
+              >
+                Sign In
+              </button>
             </div>
           </div>
         </div>

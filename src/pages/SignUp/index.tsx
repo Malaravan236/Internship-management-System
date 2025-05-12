@@ -5,6 +5,9 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   updateProfile,
+  sendEmailVerification,
+  UserCredential,
+  User
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -15,8 +18,16 @@ import {
   faLock, 
   faUser, 
   faCheckCircle, 
-  faTimes 
+  faTimes,
+  faEnvelopeOpenText,
+  faCircleExclamation
 } from "@fortawesome/free-solid-svg-icons";
+
+interface ExtendedUserCredential extends UserCredential {
+  additionalUserInfo?: {
+    isNewUser: boolean;
+  };
+}
 
 const Signup: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -26,19 +37,26 @@ const Signup: React.FC = () => {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Auto-hide success message after 3 seconds
+  // Auto-hide success message after 3 seconds (only if no verification is needed)
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (showSuccessPopup) {
+    if (showSuccessPopup && !verificationSent) {
       timer = setTimeout(() => {
         setShowSuccessPopup(false);
         navigate("/");
-      }, 3000);
+        if (window.location.pathname === "/") {
+          window.location.reload();
+        }
+      }, 2000);
     }
-    return () => clearTimeout(timer);
-  }, [showSuccessPopup, navigate]);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [showSuccessPopup, navigate, verificationSent]);
 
   // Check if email exists in manualUsers collection
   const checkEmailExistsInManualUsers = async (email: string) => {
@@ -49,18 +67,46 @@ const Signup: React.FC = () => {
     return !querySnapshot.empty;
   };
 
+  const sendVerificationEmail = async (user: User) => {
+    try {
+      await sendEmailVerification(user);
+      setVerificationSent(true);
+      setSuccessMessage(`Verification email sent to ${email}. Please check your inbox.`);
+      setShowSuccessPopup(true);
+      
+      // Update Firestore with email verification status
+      const db = getFirestore(app);
+      await setDoc(doc(db, "manualUsers", user.uid), {
+        emailVerified: false
+      }, { merge: true });
+      
+      await setDoc(doc(db, "users", user.uid), {
+        emailVerified: false
+      }, { merge: true });
+    } catch (error: any) {
+      console.error("Error sending verification email:", error.message);
+      setError(`Failed to send verification email: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setIsLoading(true);
     
     // Validate password match
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      setIsLoading(false);
       return;
     }
 
     // Validate password strength (at least 6 characters)
     if (password.length < 6) {
       setError("Password must be at least 6 characters long");
+      setIsLoading(false);
       return;
     }
 
@@ -71,6 +117,7 @@ const Signup: React.FC = () => {
       const emailExists = await checkEmailExistsInManualUsers(email);
       if (emailExists) {
         setError("This email is already registered. Please use a different email or log in.");
+        setIsLoading(false);
         return;
       }
 
@@ -81,9 +128,11 @@ const Signup: React.FC = () => {
       const user = userCredential.user;
       
       // Update user profile with username
-      await updateProfile(user, {
-        displayName: username
-      });
+      if (username) {
+        await updateProfile(user, {
+          displayName: username
+        });
+      }
 
       // Store manual user data in the "manualUsers" collection
       const userData = {
@@ -92,7 +141,8 @@ const Signup: React.FC = () => {
         username: username,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
-        authType: "manual" // Adding auth type for clarity
+        authType: "manual",
+        emailVerified: user.emailVerified
       };
 
       // Store in the manualUsers collection
@@ -110,28 +160,38 @@ const Signup: React.FC = () => {
         authType: "manual"
       }));
       
-      // Show success message
+      // Show initial success message
       setSuccessMessage(`Account created successfully! Welcome, ${username}!`);
       setShowSuccessPopup(true);
+      
+      // Send verification email
+      await sendVerificationEmail(user);
     } catch (error: any) {
       console.error("Error signing up:", error.message);
       
-      // Provide a more user-friendly error message for Firebase auth errors
+      // Provide user-friendly error messages for common Firebase auth errors
       if (error.code === 'auth/email-already-in-use') {
         setError("This email is already in use. If you signed up with Google previously, please use Google sign-in.");
+      } else if (error.code === 'auth/invalid-email') {
+        setError("Please enter a valid email address.");
+      } else if (error.code === 'auth/weak-password') {
+        setError("Password should be at least 6 characters.");
       } else {
         setError(`Signup failed: ${error.message}`);
       }
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    setError("");
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const db = getFirestore(app);
 
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider) as ExtendedUserCredential;
       const user = result.user;
       
       // Check if this is a new user
@@ -144,8 +204,9 @@ const Signup: React.FC = () => {
         username: user.displayName || `User_${user.uid.substring(0, 5)}`,
         createdAt: new Date().toISOString(),
         lastLogin: new Date().toISOString(),
-        profilePicture: user.photoURL,
-        authType: "google" // Adding auth type for clarity
+        profilePicture: user.photoURL || "",
+        authType: "google",
+        emailVerified: user.emailVerified
       };
 
       // Store in the googleUsers collection
@@ -172,7 +233,13 @@ const Signup: React.FC = () => {
       setShowSuccessPopup(true);
     } catch (error: any) {
       console.error("Error signing up with Google:", error.message);
-      setError(`Signup failed: ${error.message}`);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setError("Google sign-in was canceled.");
+      } else {
+        setError(`Signup failed: ${error.message}`);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -183,14 +250,33 @@ const Signup: React.FC = () => {
         <div className="fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg max-w-md">
           <div className="flex items-center p-4 border-l-4 border-teal-500">
             <div className="flex-shrink-0">
-              <FontAwesomeIcon icon={faCheckCircle} className="h-5 w-5 text-teal-500" />
+              <FontAwesomeIcon 
+                icon={verificationSent ? faEnvelopeOpenText : faCheckCircle} 
+                className={`h-5 w-5 ${verificationSent ? "text-blue-500" : "text-teal-500"}`} 
+              />
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-800">{successMessage}</p>
+              {verificationSent && (
+                <p className="text-xs mt-1 text-gray-600">
+                  Didn't receive the email? <button 
+                    onClick={() => {
+                      const user = getAuth().currentUser;
+                      if (user) sendVerificationEmail(user);
+                    }} 
+                    className="text-blue-500 hover:underline"
+                  >
+                    Resend
+                  </button>
+                </p>
+              )}
             </div>
             <div className="ml-auto pl-3">
               <button
-                onClick={() => setShowSuccessPopup(false)}
+                onClick={() => {
+                  setShowSuccessPopup(false);
+                  if (!verificationSent) navigate("/");
+                }}
                 className="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none"
               >
                 <FontAwesomeIcon icon={faTimes} className="h-4 w-4" />
@@ -229,7 +315,17 @@ const Signup: React.FC = () => {
           </div>
 
           <form onSubmit={handleSignup} className="space-y-4">
-            {error && <div className="text-red-500 text-center">{error}</div>}
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-4">
+                <div className="flex items-center">
+                  <FontAwesomeIcon 
+                    icon={faCircleExclamation} 
+                    className="text-red-500 mr-3" 
+                  />
+                  <p className="text-red-700">{error}</p>
+                </div>
+              </div>
+            )}
             
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700">
@@ -337,9 +433,20 @@ const Signup: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-200"
+              className={`w-full flex justify-center items-center bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-200 ${isLoading ? "opacity-75 cursor-not-allowed" : ""}`}
+              disabled={isLoading}
             >
-              Create Account
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating Account...
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
 
             <div className="flex items-center my-6">
@@ -350,15 +457,16 @@ const Signup: React.FC = () => {
 
             <button
               type="button"
-              className="w-full flex items-center justify-center bg-white border border-gray-300 rounded-md py-2 px-4 hover:bg-gray-50 transition duration-200"
+              className={`w-full flex items-center justify-center bg-white border border-gray-300 rounded-md py-2 px-4 hover:bg-gray-50 transition duration-200 ${isLoading ? "opacity-75 cursor-not-allowed" : ""}`}
               onClick={handleGoogleSignup}
+              disabled={isLoading}
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/800px-Google_%22G%22_logo.svg.png"
                 alt="Google logo"
                 className="w-5 h-5 mr-2"
               />
-              Google
+              {isLoading ? "Signing in..." : "Continue with Google"}
             </button>
 
             <div className="text-center text-sm text-gray-600 mt-6">

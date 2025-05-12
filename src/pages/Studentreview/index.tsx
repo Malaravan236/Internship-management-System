@@ -1,58 +1,40 @@
 import React, { useState, useEffect } from "react";
-import { Star, Pencil, Trash2, Send, Search } from "lucide-react";
+import { Star, Send, AlertCircle, Check, Loader2 } from "lucide-react";
 import { db } from "../../firebase/firebaseConfig";
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy,
-  where,
+import { 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  query, 
+  where, 
   getDocs,
+  
 } from "firebase/firestore";
 
-interface Review {
-  id: string;
-  trainerName: string;
-  courseName: string;
-  studentId: string;
-  studentName: string;
-  studentEmail: string;
-  rating: number;
-  comment: string;
-  createdAt: Date;
-}
 
-interface TrainerReviewProps {
-  // Removed currentStudentId and currentStudentName from props
-}
-
-const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
-  const [myReviews, setMyReviews] = useState<Review[]>([]);
+const PersonalTrainerReview: React.FC = () => {
+  // Form state
   const [trainerName, setTrainerName] = useState("");
   const [courseName, setCourseName] = useState("");
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
-  const [filter, setFilter] = useState("");
   const [trainers, setTrainers] = useState<string[]>([]);
   const [selectedTrainer, setSelectedTrainer] = useState("");
-  const [loading, setLoading] = useState(true);
-  
-  // Get student info from localStorage
+  const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Student info from localStorage
   const [studentInfo, setStudentInfo] = useState<{
     id: string;
     name: string;
     email: string;
   } | null>(null);
 
-  // Reference to the reviews collection in Firestore
   const reviewsCollection = collection(db, "trainerReviews");
 
-  // Get student info from localStorage on component mount
+  // Get student info on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -65,16 +47,12 @@ const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
         });
       } catch (error) {
         console.error("Error parsing user data:", error);
-        // Set default student info if parsing fails
         setStudentInfo({
           id: "unknown",
           name: "Anonymous",
           email: "No email"
         });
       }
-    } else {
-      // Handle case where user is not logged in
-      setStudentInfo(null);
     }
   }, []);
 
@@ -84,14 +62,10 @@ const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
       try {
         const trainersQuery = query(collection(db, "trainers"));
         const querySnapshot = await getDocs(trainersQuery);
-        const trainersList: string[] = [];
-        querySnapshot.forEach((doc) => {
-          trainersList.push(doc.data().name);
-        });
+        const trainersList = querySnapshot.docs.map(doc => doc.data().name);
         setTrainers(trainersList);
       } catch (error) {
         console.error("Error fetching trainers:", error);
-        // Fallback with some example trainers if DB fetch fails
         setTrainers(["John Smith", "Maria Rodriguez", "David Johnson", "Sarah Wong"]);
       }
     };
@@ -99,53 +73,7 @@ const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
     fetchTrainers();
   }, []);
 
-  // Listen for real-time updates on current student's reviews only
-  useEffect(() => {
-    if (!studentInfo?.id) {
-      setMyReviews([]);
-      setLoading(false);
-      return;
-    }
-
-    console.log("Setting up listener for student ID:", studentInfo.id);
-
-    const q = query(
-      reviewsCollection,
-      where("studentId", "==", studentInfo.id),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        console.log("Received snapshot with", snapshot.docs.length, "docs");
-        const reviewsData: Review[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          trainerName: doc.data().trainerName,
-          courseName: doc.data().courseName,
-          studentId: doc.data().studentId,
-          studentName: doc.data().studentName,
-          studentEmail: doc.data().studentEmail,
-          rating: doc.data().rating,
-          comment: doc.data().comment,
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-        }));
-        setMyReviews(reviewsData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error fetching reviews: ", error);
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      console.log("Cleaning up listener");
-      unsubscribe();
-    };
-  }, [studentInfo?.id]);
-
-  // Handle sending (creating or updating) a review
+  // Handle form submission
   const handleSubmit = async () => {
     if (!studentInfo) {
       alert("Please log in to submit a review");
@@ -171,13 +99,13 @@ const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
     };
 
     try {
+      setLoading(true);
+      
       if (editId) {
-        // Update existing review
-        const reviewRef = doc(db, "trainerReviews", editId);
-        await updateDoc(reviewRef, reviewData);
+        await updateDoc(doc(db, "trainerReviews", editId), reviewData);
         setEditId(null);
       } else {
-        // Check if student already reviewed this trainer
+        // Check for existing review
         const existingReviewQuery = query(
           reviewsCollection, 
           where("studentId", "==", studentInfo.id),
@@ -186,197 +114,191 @@ const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
         
         const querySnapshot = await getDocs(existingReviewQuery);
         
-        if (!querySnapshot.empty) {
-          if (!confirm("You've already reviewed this trainer. Would you like to submit another review?")) {
-            return;
-          }
+        if (!querySnapshot.empty && !confirm("You've already reviewed this trainer. Submit another review?")) {
+          return;
         }
         
-        // Add new review
         await addDoc(reviewsCollection, reviewData);
       }
       
-      // Reset form
+      // Reset form and show success
       setTrainerName("");
       setSelectedTrainer("");
       setCourseName("");
       setRating(0);
       setComment("");
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
-      console.error("Error with review:", error);
+      console.error("Error submitting review:", error);
       alert("Failed to submit review");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Populate the form with the selected review's data for editing
-  const handleEdit = (review: Review) => {
-    setEditId(review.id);
-    if (trainers.includes(review.trainerName)) {
-      setSelectedTrainer(review.trainerName);
-      setTrainerName("");
-    } else {
-      setTrainerName(review.trainerName);
-      setSelectedTrainer("");
-    }
-    setCourseName(review.courseName);
-    setRating(review.rating);
-    setComment(review.comment);
-  };
+  // Render star rating input
 
-  // Delete a review
-  const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this review?")) {
-      try {
-        await deleteDoc(doc(db, "trainerReviews", id));
-      } catch (error) {
-        console.error("Error deleting review:", error);
-        alert("Failed to delete review");
-      }
-    }
-  };
-
-  // Render stars for rating display
-  const renderStars = (count: number) => {
-    return Array(5)
-      .fill(0)
-      .map((_, i) => (
-        <Star
-          key={i}
-          size={16}
-          className={i < count ? "text-yellow-500 fill-yellow-500" : "text-gray-300"}
-        />
-      ));
-  };
-
-  // Filter reviews based on search term
-  const filteredReviews = filter
-    ? myReviews.filter(
-        (review) =>
-          review.trainerName.toLowerCase().includes(filter.toLowerCase()) ||
-          review.courseName.toLowerCase().includes(filter.toLowerCase())
-      )
-    : myReviews;
+  const isFormValid = 
+    (selectedTrainer || trainerName) && 
+    courseName && 
+    rating > 0 && 
+    comment.length > 0;
 
   if (!studentInfo) {
     return (
-      <div className="max-w-3xl mx-auto p-6 pt-40 mb-20 bg-gray-50 rounded-lg shadow-md">
-        <div className="text-center text-gray-500 py-8 bg-white rounded-lg shadow border p-6">
-          <p className="mb-4">Please log in to view and submit trainer reviews.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="max-w-3xl mx-auto p-6 pt-40 mb-20 bg-gray-50 rounded-lg shadow-md">
-        <div className="text-center text-gray-500 py-8 bg-white rounded-lg shadow border p-6">
-          <p className="mb-4">Loading your reviews...</p>
+      <div className="max-w-4xl mx-auto p-6 my-12">
+        <div className="bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
+          <AlertCircle className="mx-auto h-12 w-12 text-emerald-500 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please sign in to submit trainer reviews.</p>
+          <button className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+            Sign In
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 pt-40 mb-20 bg-gray-50 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-        My Trainer Reviews
-      </h2>
+    <div className="max-w-4xl mx-auto mt-20 my-12 p-4">
+      {/* Success Notification */}
+      {showSuccess && (
+        <div className="fixed top-6 right-6 bg-white text-emerald-800 px-6 py-3 rounded-lg shadow-lg z-50 border-t-2 border-emerald-500 flex items-center gap-2 animate-slide-in">
+          <Check className="h-5 w-5 text-emerald-600" />
+          <span className="font-medium">Review submitted successfully!</span>
+        </div>
+      )}
 
-      <div className="mb-6 bg-white p-4 rounded-md shadow">
-        <h3 className="font-semibold text-lg mb-4">
-          {editId ? "Edit Review" : "Rate a Trainer"}
-        </h3>
+      {/* Form Header */}
+      <div className="bg-emerald-600 rounded-t-xl p-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">
+          {editId ? "Edit Your Review" : "Share Your Experience"}
+        </h1>
+        <p className="text-emerald-100 opacity-90">
+          Help us improve by sharing feedback about your trainer
+        </p>
+      </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Trainer</label>
-          {trainers.length > 0 ? (
+      {/* Form Content */}
+      <div className="bg-white rounded-b-xl shadow-md p-6 md:p-8 border border-gray-100">
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Left Column */}
+          <div className="space-y-6">
+            {/* Trainer Selection */}
             <div>
-              <select
-                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={selectedTrainer}
-                onChange={(e) => {
-                  setSelectedTrainer(e.target.value);
-                  if (e.target.value) {
-                    setTrainerName("");
-                  }
-                }}
-              >
-                <option value="">-- Select a trainer --</option>
-                {trainers.map((trainer) => (
-                  <option key={trainer} value={trainer}>
-                    {trainer}
-                  </option>
-                ))}
-                <option value="other">Other (not listed)</option>
-              </select>
-              
-              {selectedTrainer === "other" && (
+              <label className="block text-gray-700 font-medium mb-2">
+                Trainer
+              </label>
+              {trainers.length > 0 ? (
+                <div>
+                  <select
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white text-gray-800"
+                    value={selectedTrainer}
+                    onChange={(e) => {
+                      setSelectedTrainer(e.target.value);
+                      setTrainerName(e.target.value === "other" ? "" : e.target.value);
+                    }}
+                  >
+                    <option value="">Select a trainer</option>
+                    {trainers.map((trainer) => (
+                      <option key={trainer} value={trainer}>
+                        {trainer}
+                      </option>
+                    ))}
+                    <option value="other">Other trainer</option>
+                  </select>
+                  
+                  {selectedTrainer === "other" && (
+                    <input
+                      type="text"
+                      placeholder="Enter trainer's name"
+                      className="w-full mt-3 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white text-gray-800"
+                      value={trainerName}
+                      onChange={(e) => setTrainerName(e.target.value)}
+                    />
+                  )}
+                </div>
+              ) : (
                 <input
                   type="text"
-                  placeholder="Enter trainer name"
-                  className="w-full mt-2 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter trainer's name"
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-800"
                   value={trainerName}
                   onChange={(e) => setTrainerName(e.target.value)}
                 />
               )}
             </div>
-          ) : (
-            <input
-              type="text"
-              placeholder="Enter trainer name"
-              className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={trainerName}
-              onChange={(e) => setTrainerName(e.target.value)}
+
+            {/* Course Name */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Course/Program
+              </label>
+              <input
+                type="text"
+                placeholder="Enter course name"
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-800"
+                value={courseName}
+                onChange={(e) => setCourseName(e.target.value)}
+              />
+            </div>
+
+            {/* Rating */}
+            <div>
+              <label className="block text-gray-700 font-medium mb-3">
+                Your Rating
+              </label>
+              <div className="flex justify-center gap-2 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="focus:outline-none transition-transform hover:scale-110"
+                  >
+                    <Star
+                      size={32}
+                      className={
+                        star <= rating
+                          ? "text-yellow-500 fill-yellow-400"
+                          : "text-gray-300"
+                      }
+                    />
+                  </button>
+                ))}
+              </div>
+              <div className="text-center mt-2 text-sm text-gray-500">
+                {rating === 1 && "Poor"}
+                {rating === 2 && "Fair"}
+                {rating === 3 && "Good"}
+                {rating === 4 && "Very Good"}
+                {rating === 5 && "Excellent"}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Comments */}
+          <div>
+            <label className="block text-gray-700 font-medium mb-2">
+              Detailed Feedback
+            </label>
+            <textarea
+              placeholder="Share your experience with this trainer..."
+              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-800"
+              rows={8}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={500}
             />
-          )}
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Course Name</label>
-          <input
-            type="text"
-            placeholder="Enter course name"
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={courseName}
-            onChange={(e) => setCourseName(e.target.value)}
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Rating</label>
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => setRating(star)}
-                className="focus:outline-none"
-              >
-                <Star
-                  size={24}
-                  className={
-                    star <= rating
-                      ? "text-yellow-500 fill-yellow-500"
-                      : "text-gray-300"
-                  }
-                />
-              </button>
-            ))}
+            <div className="text-right text-sm text-gray-500 mt-1">
+              {comment.length}/500 characters
+            </div>
           </div>
         </div>
 
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-1">Your Feedback</label>
-          <textarea
-            placeholder="Share your experience with this trainer..."
-            className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-24"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-        </div>
-
-        <div className="flex justify-between">
+        {/* Form Actions */}
+        <div className="mt-8 flex flex-col-reverse sm:flex-row justify-end gap-4">
           <button
             onClick={() => {
               setEditId(null);
@@ -386,104 +308,61 @@ const PersonalTrainerReview: React.FC<TrainerReviewProps> = () => {
               setRating(0);
               setComment("");
             }}
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+            className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {editId ? "Cancel Edit" : "Reset Form"}
           </button>
           <button
             onClick={handleSubmit}
-            className={`px-4 py-2 rounded flex items-center gap-2 ${
-              (!selectedTrainer && !trainerName) || !courseName || !rating || !comment
-                ? "bg-blue-300 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!isFormValid || loading}
+            className={`px-8 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+              !isFormValid || loading
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-emerald-600 text-white hover:bg-emerald-700"
             }`}
-            disabled={(!selectedTrainer && !trainerName) || !courseName || !rating || !comment}
           >
-            <Send size={16} />
-            {editId ? "Update Review" : "Submit Review"}
+            {loading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Send className="h-5 w-5" />
+                {editId ? "Update Review" : "Submit Review"}
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {myReviews.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center bg-white p-2 border border-gray-300 rounded-lg">
-            <Search size={18} className="text-gray-500 mr-2" />
-            <input
-              type="text"
-              placeholder="Search your reviews..."
-              className="w-full focus:outline-none"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        <h3 className="font-semibold text-lg mb-2">My Reviews</h3>
-        {filteredReviews.length > 0 ? (
-          filteredReviews.map((review) => (
-            <div
-              key={review.id}
-              className="border p-4 rounded shadow bg-white"
-            >
-              <div className="flex justify-between mb-2">
-                <h3 className="font-bold text-lg">{review.trainerName}</h3>
-                <div className="flex gap-2">
-                  <button
-                    className="text-green-600 hover:text-green-800 p-1"
-                    onClick={() => handleEdit(review)}
-                    title="Edit"
-                  >
-                    <Pencil size={18} />
-                  </button>
-                  <button
-                    className="text-red-600 hover:text-red-800 p-1"
-                    onClick={() => handleDelete(review.id)}
-                    title="Delete"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-              <p className="text-gray-600 mb-1">Course: {review.courseName}</p>
-              <div className="flex mb-2">{renderStars(review.rating)}</div>
-              <p className="mb-2">{review.comment}</p>
-              <div className="text-sm text-gray-600 text-right">
-                <span>
-                  {review.createdAt.toLocaleDateString()} {review.createdAt.toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-lg shadow border p-6">
-            <p className="mb-4">
-              {filter 
-                ? "No reviews match your search." 
-                : "You haven't submitted any trainer reviews yet."}
-            </p>
-            {!filter && (
-              <p>Rate your trainers to help improve the quality of education!</p>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Animation styles */}
+      <style>{`
+  @keyframes slide-in {
+    0% { 
+      opacity: 0; 
+      transform: translateX(20px);
+    }
+    20% { 
+      opacity: 1; 
+      transform: translateX(0);
+    }
+    80% { 
+      opacity: 1; 
+      transform: translateX(0);
+    }
+    100% { 
+      opacity: 0; 
+      transform: translateX(20px);
+    }
+  }
+  .animate-slide-in {
+    animation: slide-in 3s ease-in-out forwards;
+    box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
+  }
+`}</style>
     </div>
   );
 };
 
 export default PersonalTrainerReview;
-
-
-
-
-
-
-
-
-
-
-
-
