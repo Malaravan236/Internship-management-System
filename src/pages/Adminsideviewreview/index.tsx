@@ -160,7 +160,7 @@ const AdminTrainerReviews: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-8  mb-20 mt-20 bg-gray-100 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-center  text-emerald-800">
+      <h2 className="text-2xl  mb-6 text-center  text-emerald-800">
         Trainer Reviews Dashboard
       </h2>
 

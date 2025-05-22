@@ -57,9 +57,9 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">Contact Us</h3>
             <ul className="space-y-2">
-              <li className="text-gray-400">Email: info@internconnect.com</li>
-              <li className="text-gray-400">Phone: +91 9876543210</li>
-              <li className="text-gray-400">Address: 123 Career Lane, Success City</li>
+              <li className="text-gray-400">Email: nxtgenistrumentsind@gmail.com</li>
+              <li className="text-gray-400">Phone: +91 88833 63799, 78450 63799</li>
+              <li className="text-gray-400">Address: 20/2, Shrijay Apex, Manickam Street, Nalli Hospital Road, Municipal Coloy, ERode - 638004</li>
             </ul>
           </div>
 
@@ -68,28 +68,28 @@ const Footer: React.FC = () => {
             <h3 className="text-lg font-bold mb-4">Follow Us</h3>
             <div className="flex space-x-4">
               <a
-                href="#"
+                href="https://www.facebook.com/"
                 className="text-gray-400 hover:text-primary transition-colors duration-300"
                 aria-label="Facebook"
               >
                 <FontAwesomeIcon icon={faFacebookF} />
               </a>
               <a
-                href="#"
+                href="https://twitter.com/"
                 className="text-gray-400 hover:text-primary transition-colors duration-300"
                 aria-label="Twitter"
               >
                 <FontAwesomeIcon icon={faTwitter} />
               </a>
               <a
-                href="#"
+                href="https://www.instagram.com/"
                 className="text-gray-400 hover:text-primary transition-colors duration-300"
                 aria-label="Instagram"
               >
                 <FontAwesomeIcon icon={faInstagram} />
               </a>
               <a
-                href="#"
+                href="https://www.linkedin.com/"
                 className="text-gray-400 hover:text-primary transition-colors duration-300"
                 aria-label="LinkedIn"
               >

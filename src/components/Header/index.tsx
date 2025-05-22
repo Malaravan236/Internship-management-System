@@ -1613,13 +1613,15 @@ const Navbar: React.FC<NavbarProps> = ({
                         </a>
                       </li>
                       <li>
-                        <a
-                          onClick={() => navigate('/adminsidecertificateupload')}
-                          className="text-gray-600 hover:text-emerald-600 cursor-pointer flex items-center"
-                        >
-                          <FontAwesomeIcon icon={faUsers} className="mr-2" />
-                          Manage Users
-                        </a>
+                         {isAdmin && (
+                            <button
+                              onClick={() => navigate('internacceptedstudent')}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <FontAwesomeIcon icon={faUserCheck} className="mr-2" />
+                              Internship Status
+                            </button>
+                          )}
                       </li>
                       <li className="relative">
                         <button
@@ -1789,15 +1791,7 @@ const Navbar: React.FC<NavbarProps> = ({
                             <FontAwesomeIcon icon={faUser} className="mr-2" />
                             Profile
                           </button>
-                          {isAdmin && (
-                            <button
-                              onClick={() => navigate('internacceptedstudent')}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              <FontAwesomeIcon icon={faUserCheck} className="mr-2" />
-                              Internship Status
-                            </button>
-                          )}
+                          
 
                           <a
                             onClick={handleLogout}

@@ -1926,7 +1926,7 @@ export default function InternshipStudentManagement() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 mt-16">
-        <h1 className="text-2xl font-bold text-emerald-800 mb-4 md:mb-0">Internship Applications</h1>
+        <h1 className="text-2xl  text-emerald-800 mb-4 md:mb-0">Internship Applications</h1>
 
         <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
           {/* Search */}

@@ -294,8 +294,10 @@ export default function InternshipListings() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-emerald-800 mb-8 mt-20 text-center font-sans">Available Internships</h1>
-      
+     <h1 className="text-2xl  text-emerald-800 mb-8 mt-20 text-center font-inter">
+  Discover Impactful Internship Roles
+</h1>
+
       {internships.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 p-8 rounded-lg text-center">
           <p className="text-gray-600 text-lg">No internships available at the moment.</p>

@@ -53,16 +53,7 @@ function App() {
                 />
               ))}
             </Route>
-            {/* Uncomment if you need non-auth routes */}
-            {/* <Route>
-              {nonAuthRoutes.map((data) => (
-                <Route 
-                  path={data.path} 
-                  element={data.component} 
-                  key={data.name} 
-                />
-              ))}
-            </Route> */}
+           
           </Route>
         </Routes>
       </BrowserRouter>

@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "juice": "^11.0.1",
     "nodemailer": "^6.10.1"
   }
 }
