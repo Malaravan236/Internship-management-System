@@ -1254,7 +1254,7 @@ import {
   faUser,
   faBriefcase,
   faHome,
-  faUsers,
+ 
   faChartLine,
   faEnvelope,
   faStar,
