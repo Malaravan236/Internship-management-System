@@ -11,9 +11,22 @@
         "*.local"
       ],
       "predeploy": [
-        
-         "cd functions && npm run lint"
+        "cd functions && npm run lint"
       ]
     }
-  ]
+  ],
+  "hosting": {
+    "public": "y",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }
