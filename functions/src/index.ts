@@ -1,2 +1,2 @@
-import { sendAcceptanceEmail } from "./sendEmail";
-exports.sendAcceptanceEmail = sendAcceptanceEmail;
+// import { sendAcceptanceEmail } from "./sendEmail";
+// exports.sendAcceptanceEmail = sendAcceptanceEmail;
