@@ -11,8 +11,8 @@ app.use(express.json());
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER || 'priyakanmani578@gmail.com',
-    pass: process.env.EMAIL_PASS || 'nsla tbtb vwml kgdh',
+    user: 'priyakanmani578@gmail.com', // Your email
+    pass: 'nsla tbtb vwml kgdh', // Your app password
   },
 });
 
@@ -22,7 +22,7 @@ app.post('/api/send-acceptance-email', async (req, res) => {
 
   try {
     const mailOptions = {
-      from: 'InternConnect <noreply@internconnect.com>',
+      from: 'Your Organization <noreply@yourdomain.com>',
       to: toEmail,
       subject: 'Congratulations! Your Internship Application Has Been Accepted',
       html: `
@@ -40,15 +40,9 @@ app.post('/api/send-acceptance-email', async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK' });
-});
-
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-module.exports = app;
 
 
 
